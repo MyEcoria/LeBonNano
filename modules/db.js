@@ -39,12 +39,10 @@ const anonceSchema = new mongoose.Schema({
     date: { type: Date, required: true, default: Date.now },
     id: { type: String, required: false, default: uuidv4() }
 }, { 
-    // Define text index on 'name' and 'description' fields
-    // This will enable text search on these fields
-    // We set the 'default_language' to 'french' to use french stemming when searching
-    // You can adjust this option depending on your needs
     text: { name: "textIndex", description: "textIndex", default_language: "french" } 
 });
+
+anonceSchema.index({ name: 'text', description: 'text' });
 
 const messageSchema = new mongoose.Schema({
     sender: { type: String, required: true },
@@ -53,6 +51,16 @@ const messageSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// Schéma pour stocker les images
+const imageSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    data: { type: Buffer, required: true },
+    contentType: { type: String, required: true },
+    hash: { type: String, required: true },
+    uuid: { type: String, required: true, default: uuidv4()}
+});
+  
+const Image = mongoose.model('Image', imageSchema);
 const User = mongoose.model('User', userSchema);
 const Anonce = mongoose.model('Anonce', anonceSchema);
 const Message = mongoose.model('Message', messageSchema);
@@ -130,11 +138,45 @@ async function getUser(address) {
 
 async function getUserbyId(id) {
     const data = await User.findOne({ id: id });
-    if (user) {
+    if (data) {
       return data.toJSON();
     }
     return null;
 }
+
+async function addImage(name, data, contentType, hash) {
+    const newImage = new Image({
+        name: name,
+        data: data,
+        contentType: contentType,
+        hash: hash
+    });
+    await newImage.save();
+}
+
+async function getImages(hash) {
+    const data = await Image.findOne({ hash: hash });
+    if (data) {
+      return data.toJSON();
+    }
+    return null;
+}
+
+async function getUserbyUuid(cookies) {
+    const data = await User.findOne({ cookies: cookies });
+    if (data) {
+      return data.toJSON();
+    }
+    return null;
+}
+async function getAnnonce(uuid) {
+    const data = await Anonce.findOne({ id: uuid });
+    if (data) {
+        return data.toJSON();
+    }
+    return null;
+}
+
 
 // ----------------------- Export -----------------------------
 module.exports = {
@@ -147,7 +189,11 @@ module.exports = {
     getUser,
     getAllAnonces,
     getLatestAnonces,
-    getUserbyId
+    getUserbyId,
+    addImage,
+    getImages,
+    getUserbyUuid,
+    getAnnonce
 };
 
 // ----------------------- Fin -----------------------------
