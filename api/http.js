@@ -198,6 +198,9 @@ app.get('/image/:hash', async (req, res) => {
 app.get('/search/:search', async (req, res) => {
     const search = req.params.search;
     const annonces = await db.getAnonces(search);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
     res.json(annonces);
 });
 
