@@ -27,7 +27,8 @@ const userSchema = new mongoose.Schema({
     score: { type: Number, required: false },
     name: { type: String, required: true },
     date: { type: Date, required: true, default: Date.now },
-    cookies: { type: String, required: true }
+    cookies: { type: String, required: true },
+    score: { type: Number, required: false, default: 0 }
 });
 
 const anonceSchema = new mongoose.Schema({
@@ -37,7 +38,8 @@ const anonceSchema = new mongoose.Schema({
     image: { type: String, required: true },
     owner: { type: String, required: true },
     date: { type: Date, required: true, default: Date.now },
-    id: { type: String, required: false, default: uuidv4() }
+    id: { type: String, required: false, default: uuidv4() },
+    add: { type: String, required: true }
 }, { 
     text: { name: "textIndex", description: "textIndex", default_language: "french" } 
 });
@@ -68,25 +70,33 @@ const Message = mongoose.model('Message', messageSchema);
 
 
 // ----------------------- Fonctions -----------------------------
-async function addUser(name, address, ip, cookies) {
+async function addUser(name, address, ip, cookies, score) {
     const newUser = new User({
       address: address,
       name: name,
       ip: ip,
-      cookies: cookies
+      cookies: cookies,
+      score: score
     });
     await newUser.save();
 }
 
-async function addAnonce(name, description, price, image, owner) {
+async function addAnonce(name, description, price, image, owner, add) {
     const newAnonce = new Anonce({
       name: name,
       description: description,
       price: price,
       image: image,
-      owner: owner
+      owner: owner,
+      add: add
     });
-    await newAnonce.save();
+    console.log("4444");
+    await newAnonce.save()
+        .then((result) => {
+            console.log(result);
+        }).catch((err) => {
+            console.log(err);
+        });
 }
 
 async function addMessage(sender, receiver, text) {
@@ -124,11 +134,20 @@ async function getAllAnonces() {
 }
 
 async function getLatestAnonces(number) {
-    const anonces = await Anonce.find().sort({ date: -1 }).limit(number);
+    const anonces = await Anonce.find().sort({ date: -1 }).limit(number).select('-owner');
+    
     return anonces;
-} // explique: https://stackoverflow.com/questions/10123953/mongodb-find-latest-10-records
+}
 
 async function getUser(address) {
+    const user = await User.findOne({ address: address }).select('-cookies').select('-ip');
+    if (user) {
+      return user.toJSON();
+    }
+    return null;
+}
+
+async function getUserP(address) {
     const user = await User.findOne({ address: address });
     if (user) {
       return user.toJSON();
@@ -169,6 +188,8 @@ async function getUserbyUuid(cookies) {
     }
     return null;
 }
+
+
 async function getAnnonce(uuid) {
     const data = await Anonce.findOne({ id: uuid });
     if (data) {
@@ -177,6 +198,36 @@ async function getAnnonce(uuid) {
     return null;
 }
 
+async function getArticleByUser(add) {
+  const articles = await Anonce.find({ add: add }).select('-owner');
+  return articles;
+}
+
+async function getArticleByUuid(uuid) {
+  const articles = await Anonce.find({ owner: uuid });
+  return articles;
+}
+
+async function setName(newName, uuid) {
+    const data = await User.findOne({ cookies: uuid });
+    if (data) {
+        data.name = newName;
+        const etoui = await data.save();
+        if (etoui) {
+            return etoui.toJSON();
+        } else {
+            return null;
+        }
+    }
+}
+
+async function getUserByName(name) {
+    const data = await User.findOne({ name: name });
+    if (data) {
+      return data.toJSON();
+    }
+    return null;
+}
 
 // ----------------------- Export -----------------------------
 module.exports = {
@@ -193,7 +244,12 @@ module.exports = {
     addImage,
     getImages,
     getUserbyUuid,
-    getAnnonce
+    getAnnonce,
+    getArticleByUser,
+    getUserP,
+    getArticleByUuid,
+    setName,
+    getUserByName
 };
 
 // ----------------------- Fin -----------------------------

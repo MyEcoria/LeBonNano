@@ -31,25 +31,94 @@ const upload = multer({
 
 app.get('/home', async (req, res) => {
     const latest = await db.getLatestAnonces(40);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
     res.json(latest);
 });
 
 app.get('/annonce/:id', async (req, res) => {
 
     const anonce = await db.getAnnonce(req.params.id);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.json(anonce);
+
+});
+
+app.get('/anUser/:id', async (req, res) => {
+
+    const anonce = await db.getArticleByUser(req.params.id);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.json(anonce);
+
+});
+
+app.get('/anUuid/:id', async (req, res) => {
+
+    const anonce = await db.getArticleByUuid(req.params.id);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
     res.json(anonce);
 
 });
 
 app.get('/user/:uuid', async (req, res) => {
-    const user = await db.getUserbyUuid(req.params.uuid);
+    const user = await db.getUser(req.params.uuid);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
     res.json(user);
 });
+
+app.get('/theUser/:uuid', async (req, res) => {
+    const user = await db.getUserbyUuid(req.params.uuid);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.json(user);
+});
+
+app.get('/change/:uuid/:name', async (req, res) => {
+
+  console.log("UUID: " + req.params.uuid + " Name: " + req.params.name);
+
+  try {
+      const result = await db.getUserByName(req.params.name);
+      console.log(result);
+      if (!result) {
+          console.log("OK");
+          const user = await db.setName(req.params.name, req.params.uuid);
+          console.log(user);
+          res.header("Access-Control-Allow-Origin", "*");
+          res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+          res.header("Access-Control-Allow-Headers", "Content-Type");
+          res.json(user);
+      } else {
+          console.log("KO");
+          res.header("Access-Control-Allow-Origin", "*");
+          res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+          res.header("Access-Control-Allow-Headers", "Content-Type");
+          res.status(400).send("KO");
+      }
+  } catch (err) {
+      console.log(err);
+      res.status(500).send("Internal server error");
+  }
+  
+});
+
+
 
 // Route pour recevoir et enregistrer une image
 app.post('/new', upload.single('image'), async (req, res) => {
     console.log("new");
     const body = req.body;
+    console.log(body);
     try {
       // Récupération du fichier d'image depuis la requête
       const imageFile = req.file;
@@ -69,13 +138,19 @@ app.post('/new', upload.single('image'), async (req, res) => {
       // Enregistrement de l'image dans la base de données
       await db.addImage(imageFile.originalname, imageFile.buffer, imageFile.mimetype, hashString);
       console.log(body);
-      const leBody = JSON.parse(body.data);
+      const leBody1 = JSON.stringify(body);
+      console.log(leBody1);
+      const leBody = JSON.parse(leBody1);
       console.log(leBody);
+      if (leBody.uuid) {console.log("OK: 1")}
+      if (leBody.name) {console.log("OK: 2")}
+      if (leBody.description) {console.log("OK: 3")}
+      if (leBody.price) {console.log("OK: 4")}
       if (leBody.uuid && leBody.description && leBody.price && leBody.name) {
         console.log("ok");
         const user = await db.getUserbyUuid(leBody.uuid);
         if (user) {
-          await db.addAnonce(leBody.name, leBody.description, leBody.price, hashString, leBody.uuid);
+          await db.addAnonce(leBody.name, leBody.description, parseInt(leBody.price), hashString, leBody.uuid, user["address"]);
         } else {
           res.status(403).send('User not found');
         }
@@ -83,7 +158,10 @@ app.post('/new', upload.single('image'), async (req, res) => {
       }
   
       // Envoi d'une réponse indiquant que l'image a été enregistrée
-      res.send(`Image saved with hash: ${hashString}`);
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
+      res.header("Access-Control-Allow-Headers", "Content-Type");
+      res.status(200).send(`{"status": "Image saved with hash: ${hashString}"}`);
     } catch (err) {
       console.error(err);
       res.status(500).send('Error saving image');
@@ -146,7 +224,7 @@ app.post('/all', async (req, res) => {
     }
 });
 // Démarrer le serveur en écoutant le port défini
-app.listen(general["httpPort"], function() {
+app.listen(general["httpPort"], '0.0.0.0', function() {
   console.log(`Serveur démarré sur le port ${general["httpPort"]}`);
 });
 
