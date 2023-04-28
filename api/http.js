@@ -226,9 +226,32 @@ app.post('/all', async (req, res) => {
         res.json(annonces);
     }
 });
+
+app.get('/getMessages/:sender/:receive', async (req, res) => {
+    const messages = await db.getMessages();
+    res.json(messages);
+});
+
+app.post('/messages', async (req, res) => {
+    const body = req.body;
+    console.log(body);
+    if (body["action"] && body["action"] == "getMessages") {
+        const messages = await db.getMessages(body["sender"], body["receive"]);
+        res.json(messages);
+    } else if (body["action"] && body["action"] == "sendMessage") {
+        const user = await db.getUserbyUuid(body["sender"]);
+        if (user) {
+            await db.sendMessage(body["sender"], body["receive"], body["message"]);
+            res.json({"status": "ok"});
+        } else {
+            res.status(403).send('User not found');
+        }
+    } else if (body["action"] && body["action"] == "create") {
+      
+    }
+});
+
 // Démarrer le serveur en écoutant le port défini
 app.listen(general["httpPort"], '0.0.0.0', function() {
   console.log(`Serveur démarré sur le port ${general["httpPort"]}`);
 });
-
-

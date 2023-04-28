@@ -49,6 +49,7 @@ anonceSchema.index({ name: 'text', description: 'text' });
 const messageSchema = new mongoose.Schema({
     sender: { type: String, required: true },
     receiver: { type: String, required: true },
+    name: { type: String, required: true},
     text: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
 });
@@ -103,7 +104,7 @@ async function addMessage(sender, receiver, text) {
     const newMessage = new Message({
       sender: sender,
       receiver: receiver,
-      text: text
+      name: text
     });
     await newMessage.save();
 }
@@ -229,6 +230,25 @@ async function getUserByName(name) {
     return null;
 }
 
+async function getMessages(sender, receiver) {
+    const messages = await Message.find({ $or: [{ sender: sender, receiver: receiver }, { sender: receiver, receiver: sender }] });
+    return messages;
+}
+
+async function sendMessage(sender, receiver, text) {
+    const newMessage = new Message({
+        sender: sender,
+        receiver: receiver,
+        text: text
+    });
+    await newMessage.save();
+}
+
+async function getConversation(user) {
+    const messages = await Message.find({ $or: [{ sender: user }, { receiver: user }] });
+    return messages;
+}
+
 // ----------------------- Export -----------------------------
 module.exports = {
     addUser,
@@ -249,7 +269,10 @@ module.exports = {
     getUserP,
     getArticleByUuid,
     setName,
-    getUserByName
+    getUserByName,
+    getMessages,
+    sendMessage,
+    getConversation
 };
 
 // ----------------------- Fin -----------------------------
